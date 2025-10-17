@@ -2,6 +2,7 @@ import { useState } from "react";
 import "../styles/App.css";
 import { CognitoUserPool } from "amazon-cognito-identity-js";
 import { poolData } from "../config/cognito";
+import { useNavigate } from "react-router";
 
 const userPool = new CognitoUserPool(poolData);
 
@@ -9,25 +10,27 @@ function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setMessage("");
 
     try {
-      const result = await new Promise((resolve, reject) => {
-        userPool.signUp(email, password, [], [], (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
+      userPool.signUp(email, password, [], [], (err) => {
+        setLoading(false);
+        if (err) {
+          setMessage(err.message || "登録に失敗しました");
+          return;
+        }
+        // result.userをグローバルstateとして持つとか
+        navigate("/verify", { state: { email } });
       });
-      console.log("✅ SignUp成功:", result);
-      setMessage("サインアップ成功！確認メールをチェックしてください。");
-      setEmail("");
-      setPassword("");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("Sign Up 失敗", error);
       setMessage(error.message || "登録に失敗しました");
     }
   };
@@ -49,7 +52,7 @@ function SignUp() {
         />
 
         <button type="submit" disabled={email === "" || password === ""}>
-          登録
+          {loading ? "登録中..." : "登録"}
         </button>
       </form>
 

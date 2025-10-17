@@ -9,9 +9,11 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     setMessage("");
 
     try {
@@ -57,7 +59,7 @@ function Login() {
         />
 
         <button type="submit" disabled={email === "" || password === ""}>
-          ログイン
+          {loading ? "ログイン中" : "ログイン"}
         </button>
       </form>
 
