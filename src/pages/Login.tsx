@@ -1,0 +1,69 @@
+import { useState } from "react";
+import "../styles/App.css";
+import { CognitoUser, AuthenticationDetails, CognitoUserPool } from "amazon-cognito-identity-js";
+import { poolData } from "../config/cognito";
+
+const userPool = new CognitoUserPool(poolData);
+
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage("");
+
+    try {
+      const user = new CognitoUser({ Username: email, Pool: userPool });
+      const authDetails = new AuthenticationDetails({ Username: email, Password: password });
+
+      const result = await new Promise((resolve, reject) => {
+        user.authenticateUser(authDetails, {
+          onSuccess: (result) => {
+            const accessToken = result.getAccessToken().getJwtToken();
+            localStorage.setItem("accessToken", accessToken);
+            resolve(accessToken);
+          },
+          onFailure: (err) => reject(err),
+        });
+      });
+
+      console.log("✅ ログイン成功:", result);
+      setMessage("ログイン成功");
+      setEmail("");
+      setPassword("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("ログイン失敗", error);
+      setMessage(error.message || "ログインに失敗しました");
+    }
+  };
+
+  return (
+    <>
+      <h1>ログイン</h1>
+      <form onSubmit={handleLogin}>
+        <label htmlFor="email">メールアドレス</label>
+        <input id="email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <label htmlFor="password">パスワード</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <button type="submit" disabled={email === "" || password === ""}>
+          ログイン
+        </button>
+      </form>
+
+      {message && <p>{message}</p>}
+    </>
+  );
+}
+
+export default Login;
