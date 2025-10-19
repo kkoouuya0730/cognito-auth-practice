@@ -5,7 +5,7 @@ import { AuthContext } from "./useAuth";
 export type AuthContextType = {
   isAuthenticated: boolean;
   token: string | null;
-  login: (token: string) => void;
+  login: (newToken: string, from: string) => void;
   logout: () => void;
 };
 
@@ -18,10 +18,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedToken) setToken(storedToken);
   }, []);
 
-  const login = (newToken: string) => {
+  const login = (newToken: string, from: string) => {
     localStorage.setItem("accessToken", newToken);
     setToken(newToken);
-    navigate("/home");
+    navigate(from, { replace: true });
   };
 
   const logout = () => {

@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import UserHome from "./pages/UserHome";
 import Layout from "./components/Layout";
 import { AuthProvider } from "./contexts/authContext/AuthContext";
+import { PrivateRoute } from "./components/PrivateRoute";
 
 export const router = createBrowserRouter([
   {
@@ -20,7 +21,14 @@ export const router = createBrowserRouter([
       { path: "signup", element: <SignUp /> },
       { path: "verify", element: <VerifyCode /> },
       { path: "login", element: <Login /> },
-      { path: "home", element: <UserHome /> },
+      {
+        path: "home",
+        element: (
+          <PrivateRoute>
+            <UserHome />
+          </PrivateRoute>
+        ),
+      },
     ],
   },
 ]);

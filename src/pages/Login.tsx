@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CognitoUser, AuthenticationDetails, CognitoUserPool } from "amazon-cognito-identity-js";
 import { poolData } from "../config/cognito";
 import { useAuth } from "../contexts/authContext/useAuth";
+import { useLocation } from "react-router";
 
 const userPool = new CognitoUserPool(poolData);
 
@@ -12,6 +13,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const location = useLocation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,8 @@ function Login() {
         user.authenticateUser(authDetails, {
           onSuccess: (result) => {
             const accessToken = result.getAccessToken().getJwtToken();
-            login(accessToken);
+            // 認証ガードでログイン画面に遷移した場合は、元の画面に戻る
+            login(accessToken, location.state?.from?.pathname || "/home");
             resolve(accessToken);
           },
           onFailure: (err) => reject(err),
