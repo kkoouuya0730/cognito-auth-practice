@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "../styles/App.css";
 import { CognitoUserPool } from "amazon-cognito-identity-js";
 import { poolData } from "../config/cognito";
 import { useNavigate } from "react-router";

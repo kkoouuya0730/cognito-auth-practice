@@ -1,7 +1,7 @@
 import { useState } from "react";
-import "../styles/App.css";
 import { CognitoUser, AuthenticationDetails, CognitoUserPool } from "amazon-cognito-identity-js";
 import { poolData } from "../config/cognito";
+import { useAuth } from "../contexts/authContext/useAuth";
 
 const userPool = new CognitoUserPool(poolData);
 
@@ -10,6 +10,8 @@ function Login() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,18 +22,17 @@ function Login() {
       const user = new CognitoUser({ Username: email, Pool: userPool });
       const authDetails = new AuthenticationDetails({ Username: email, Password: password });
 
-      const result = await new Promise((resolve, reject) => {
+      await new Promise((resolve, reject) => {
         user.authenticateUser(authDetails, {
           onSuccess: (result) => {
             const accessToken = result.getAccessToken().getJwtToken();
-            localStorage.setItem("accessToken", accessToken);
+            login(accessToken);
             resolve(accessToken);
           },
           onFailure: (err) => reject(err),
         });
       });
 
-      console.log("✅ ログイン成功:", result);
       setMessage("ログイン成功");
       setEmail("");
       setPassword("");
