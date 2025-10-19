@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CognitoUser, AuthenticationDetails, CognitoUserPool } from "amazon-cognito-identity-js";
 import { poolData } from "../config/cognito";
 import { useAuth } from "../contexts/authContext/useAuth";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 
 const userPool = new CognitoUserPool(poolData);
 
@@ -66,6 +66,10 @@ function Login() {
           {loading ? "ログイン中" : "ログイン"}
         </button>
       </form>
+
+      <p>
+        パスワードをお忘れの方は<Link to="/password-forget">こちら</Link>
+      </p>
 
       {message && <p>{message}</p>}
     </>

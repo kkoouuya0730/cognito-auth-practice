@@ -7,6 +7,8 @@ import UserHome from "./pages/UserHome";
 import Layout from "./components/Layout";
 import { AuthProvider } from "./contexts/authContext/AuthContext";
 import { PrivateRoute } from "./components/PrivateRoute";
+import ForgetPassword from "./pages/FogetPassword";
+import ConfirmPassword from "./pages/ConfirmPassword";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +23,8 @@ export const router = createBrowserRouter([
       { path: "signup", element: <SignUp /> },
       { path: "verify", element: <VerifyCode /> },
       { path: "login", element: <Login /> },
+      { path: "password-forget", element: <ForgetPassword /> },
+      { path: "confirm-password", element: <ConfirmPassword /> },
       {
         path: "home",
         element: (
