@@ -5,11 +5,16 @@ import VerifyCode from "./pages/VerifyCode";
 import Login from "./pages/Login";
 import UserHome from "./pages/UserHome";
 import Layout from "./components/Layout";
+import { AuthProvider } from "./contexts/authContext/AuthContext";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,
+    element: (
+      <AuthProvider>
+        <Layout />
+      </AuthProvider>
+    ),
     children: [
       { index: true, element: <Navigate to="/signup" /> },
       { path: "signup", element: <SignUp /> },
