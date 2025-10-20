@@ -1,3 +1,4 @@
+import FileUpload from "../components/FileUpload";
 import { useAuth } from "../contexts/authContext/useAuth";
 
 function UserHome() {
@@ -13,6 +14,8 @@ function UserHome() {
           <button type="button" onClick={logout}>
             ログアウト
           </button>
+
+          <FileUpload />
         </>
       ) : (
         <p>未ログインです。ログインしてください</p>
