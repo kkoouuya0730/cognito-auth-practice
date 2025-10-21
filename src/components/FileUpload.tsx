@@ -3,7 +3,7 @@ import AWS from "aws-sdk";
 import { useAuth } from "../contexts/authContext/useAuth";
 
 export default function FileUpload() {
-  const { userId } = useAuth();
+  const { userId, userRole } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
 
@@ -17,10 +17,11 @@ export default function FileUpload() {
     setMessage("アップロード中...");
     try {
       const s3 = new AWS.S3();
+      const keyPrefix = userRole === "Admin" ? "admin" : userId;
       await s3
         .putObject({
           Bucket: import.meta.env.VITE_S3_BUCKET_NAME!,
-          Key: `${userId}/${file.name}`,
+          Key: `${keyPrefix}/${file.name}`,
           Body: file,
         })
         .promise();

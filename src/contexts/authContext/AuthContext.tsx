@@ -4,12 +4,16 @@ import { AuthContext } from "./useAuth";
 import { identityPoolId, poolData, region } from "../../config/cognito";
 import { AuthenticationDetails, CognitoUser, CognitoUserPool } from "amazon-cognito-identity-js";
 import AWS from "aws-sdk";
+import { jwtDecode } from "jwt-decode";
+
+export type UserRole = "Admin" | "User" | "Guest";
 export type AuthContextType = {
   isAuthenticated: boolean;
   login: (email: string, password: string, from?: string) => Promise<void>;
   logout: () => void;
   tokenRefresh: () => Promise<void>;
   userId: string | null;
+  userRole: UserRole | null;
 };
 const userPool = new CognitoUserPool(poolData);
 
@@ -18,6 +22,7 @@ const prefix = `CognitoIdentityServiceProvider.${poolData.ClientId}`;
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   const navigate = useNavigate();
 
@@ -26,22 +31,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (token) {
       setIsAuthenticated(true);
       // AWS 認証情報を初期化して identityId を取得
-      initAWSCredentials(token).then((id) => setUserId(id));
+      initAWSCredentials(token).then(({ id, role }) => {
+        setUserId(id);
+        setUserRole(role);
+      });
     }
   }, []);
 
-  const initAWSCredentials = async (idToken: string): Promise<string | null> => {
-    AWS.config.region = region;
-    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-      IdentityPoolId: identityPoolId,
-      Logins: {
-        [`cognito-idp.${region}.amazonaws.com/${poolData.UserPoolId}`]: idToken,
-      },
-    });
+  const initAWSCredentials = async (idToken: string): Promise<{ id: string | null; role: UserRole }> => {
+    try {
+      AWS.config.region = region;
+      // id poolに紐付けられたIAMロールを引き受ける
+      AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+        IdentityPoolId: identityPoolId,
+        Logins: {
+          [`cognito-idp.${region}.amazonaws.com/${poolData.UserPoolId}`]: idToken,
+        },
+      });
 
-    const credentials = AWS.config.credentials as AWS.CognitoIdentityCredentials;
-    await credentials.getPromise();
-    return credentials.identityId || null;
+      const credentials = AWS.config.credentials as AWS.CognitoIdentityCredentials;
+      console.log(credentials);
+      await credentials.getPromise();
+
+      // IDトークンから role を取得
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload = jwtDecode<Record<string, any>>(idToken);
+      const groups = payload["cognito:groups"] as string[] | undefined;
+      const role = (groups?.[0] as UserRole) || "Guest";
+
+      return { id: credentials.identityId || null, role };
+    } catch (error) {
+      console.error(error);
+      return { id: null, role: "Guest" };
+    }
   };
 
   const login = async (email: string, password: string, from = "/home") => {
@@ -55,8 +77,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem("accessToken", idToken);
           setIsAuthenticated(true);
 
-          const id = await initAWSCredentials(idToken);
+          const { id, role } = await initAWSCredentials(idToken);
           setUserId(id);
+          setUserRole(role);
           navigate(from, { replace: true });
           resolve();
         },
@@ -69,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("accessToken");
     setIsAuthenticated(false);
     setUserId(null);
+    setUserRole(null);
     AWS.config.credentials = undefined;
     navigate("/login");
   };
@@ -100,6 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     tokenRefresh,
     userId,
+    userRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
