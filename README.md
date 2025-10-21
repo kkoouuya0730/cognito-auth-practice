@@ -1,76 +1,99 @@
 # cognito-auth-practice
-Cognitoの認証機能を学ぶ用のリポジトリ。(過去実装経験あるが振り返りがてら再学習)
 
-# React + TypeScript + Vite
+## 🏷️ 1. プロジェクト概要
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+このリポジトリは、AWS Cognito を使用した「認証（Authentication）」および「認可（Authorization）」の仕組みを学習するためのプロジェクトです。(過去実装経験あるが振り返りがてら再学習)
+React + Vite 環境でフロントエンドを構築し、Cognito ユーザープールと ID プールを連携させて、認証済みユーザーのみが自分の S3 フォルダにファイルをアップロードできるようにしています。
 
-Currently, two official plugins are available:
+### 使用技術
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **フロントエンド**: React / Vite / TypeScript
+- **認証基盤**: AWS Cognito（User Pool / Identity Pool）
+- **ストレージ**: Amazon S3
+- **その他**: AWS IAM
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ⚙️ 2. 環境構成
 
-## Expanding the ESLint configuration
+### AWS リソース
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Cognito User Pool**
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+  - ユーザー登録・ログイン・トークン発行を担当
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Cognito Identity Pool**
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+  - トークンをもとに一時的な AWS クレデンシャルを発行
+
+- **IAM ロール**
+
+  - 認証済みユーザーに S3 への限定的アクセスを付与
+
+- **S3 バケット**
+
+  - 各ユーザーは自分のフォルダ配下にのみアップロード可能
+
+---
+
+## 🔑 3. 認証フローの理解
+
+Cognito では「ユーザー認証」と「AWS リソースアクセス（認可）」を分離して設計します。
+
+1. ユーザーがサインアップ（Cognito User Pool に登録）
+2. サインイン時に **トークン（ID / Access / Refresh）** を取得
+3. ID トークンを **Identity Pool** に渡して一時的な AWS クレデンシャルを発行
+4. クレデンシャルに紐づく IAM ロールで S3 にアクセス（認可）
+
+```text
+[User] → [Cognito User Pool] → [ID Token] → [Identity Pool] → [IAM Role] → [S3]
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🧩 4. 実装ポイント
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **amazon-cognito-identity-js**
+
+  - `AuthenticationDetails` と `CognitoUser` を使用してサインイン処理を実装
+
+- **Vite の Node ポリフィル**
+
+  - `global is not defined` エラーを回避するため `vite.config.js` に `globalThis` を設定
+
+- **S3 アップロード**
+
+  - `AWS.CognitoIdentityCredentials` を使って一時的な認証情報を取得
+  - `s3.upload()` で自分のフォルダ配下にのみファイルアップロード
+
+---
+
+## 🔒 5. IAM ポリシー設計
+
+### ポリシー名：`AppUserFilesUploadPolicy`
+
+認証済みユーザーが自分のフォルダ配下のみアップロード可能とする IAM ポリシー。
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": "arn:aws:s3:::${バケット名}/${cognito-identity.amazonaws.com:sub}/*"
+    }
+  ]
+}
 ```
+
+この設定により、ユーザーは自分の Cognito Identity ID に紐づいたフォルダのみ操作可能。
+
+---
+
+## 🧠 6. 学びのまとめ
+
+- Cognito の「User Pool（認証）」と「Identity Pool（認可）」の役割を区別しながら実装を進められた
+- Vite 環境で Node.js 向けライブラリを動かすためには polyfill が必要
+- IAM ロールを使えば、ユーザーごとの S3 アクセス制御を細かく設定できる
+- User PoolのGroupを利用することで、ユーザーごとのロール(Admin, User, Guest)を元にアクセス制御が可能
